@@ -18,7 +18,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode themeMode = ThemeMode.light; // Default theme
+  ThemeMode themeMode = ThemeMode.light; // Default theme mode
 
   void setThemeMode(ThemeMode mode) {
     setState(() {
@@ -34,18 +34,35 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: themeMode,
-      // Set the initial route to the SplashScreen
-      home: const SplashScreen(), // Set SplashScreen as initial screen
+      // Set SplashScreen as the initial screen
+      home: const SplashScreen(),
       routes: {
+        // Login route
         '/login': (context) => const InventoryLoginPage(),
-        '/home': (context) =>
-            HomePage(onThemeChanged: setThemeMode, currentThemeMode: themeMode),
+
+        // Home route
+        '/home': (context) => HomePage(
+              onThemeChanged: setThemeMode,
+              currentThemeMode: themeMode,
+            ),
+
+        // Settings route
         '/settings': (context) => SettingsPage(
-            onThemeChanged: setThemeMode, currentThemeMode: themeMode),
+              onThemeChanged: setThemeMode,
+              currentThemeMode: themeMode,
+            ),
+
+        // Inventory List route
         '/inventory': (context) => InventoryList(
-            onThemeChanged: setThemeMode, currentThemeMode: themeMode),
+              onThemeChanged: setThemeMode,
+              currentThemeMode: themeMode,
+            ),
+
+        // Billing Dashboard route
         '/billing': (context) => BillingDashboard(
-            onThemeChanged: setThemeMode, currentThemeMode: themeMode),
+              onThemeChanged: setThemeMode,
+              currentThemeMode: themeMode,
+            ),
       },
     );
   }

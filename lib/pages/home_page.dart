@@ -151,8 +151,8 @@ class HomePage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.notifications, size: 24),
                       SizedBox(width: 8),
                       Text(

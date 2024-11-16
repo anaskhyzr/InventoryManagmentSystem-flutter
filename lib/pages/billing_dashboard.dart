@@ -3,9 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class BillingDashboard extends StatefulWidget {
-  final ThemeMode currentThemeMode;
+  const BillingDashboard({
+    Key? key,
+    required this.onThemeChanged,
+    required this.currentThemeMode,
+  }) : super(key: key);
 
-  const BillingDashboard({super.key, required this.currentThemeMode, required void Function(ThemeMode mode) onThemeChanged});
+  final Function(ThemeMode) onThemeChanged;
+  final ThemeMode currentThemeMode;
 
   @override
   _BillingDashboardState createState() => _BillingDashboardState();
@@ -13,91 +18,91 @@ class BillingDashboard extends StatefulWidget {
 
 class _BillingDashboardState extends State<BillingDashboard> {
   final List<Map<String, dynamic>> _billingItems = [];
-  final TextEditingController _itemNameController = TextEditingController();
-  final TextEditingController _itemQuantityController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
+  final List<Map<String, dynamic>> _inventoryItems = [];
+  Map<String, dynamic>? _selectedItem;
   int _totalAmount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadBillingItems();
+    _loadInventory();
   }
 
-  Future<void> _loadBillingItems() async {
+  // Load inventory from SharedPreferences
+  Future<void> _loadInventory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? storedItems = prefs.getString('billingItems');
+    String? storedInventory = prefs.getString('inventoryItems');
 
-    if (storedItems != null) {
+    if (storedInventory != null) {
       setState(() {
-        _billingItems
-            .addAll(List<Map<String, dynamic>>.from(json.decode(storedItems)));
+        _inventoryItems.addAll(List<Map<String, dynamic>>.from(json.decode(storedInventory)));
       });
     }
   }
 
-  Future<void> _saveBillingItems() async {
+  // Save updated inventory to SharedPreferences
+  Future<void> _saveInventory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('billingItems', json.encode(_billingItems));
+    prefs.setString('inventoryItems', json.encode(_inventoryItems));
   }
 
-  void _addItemToBill() async {
-    String itemName = _itemNameController.text;
-    String itemQuantity = _itemQuantityController.text;
-
-    // Find item in inventory
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? storedItems = prefs.getString('inventoryItems');
-
-    if (storedItems != null) {
-      List<Map<String, dynamic>> inventoryItems =
-          List<Map<String, dynamic>>.from(json.decode(storedItems));
-      final inventoryItem = inventoryItems
-          .firstWhere((item) => item['name'] == itemName, orElse: () => {});
-
-      if (inventoryItem.isNotEmpty) {
-        int availableQuantity = int.parse(inventoryItem['quantity']);
-        int quantityToAdd = int.parse(itemQuantity);
-
-        if (quantityToAdd > availableQuantity) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Insufficient quantity in inventory')),
-          );
-          return;
-        }
-
-        setState(() {
-          _billingItems.add({
-            'name': itemName,
-            'quantity': itemQuantity,
-            'price': inventoryItem['price'],
-            'total': quantityToAdd * int.parse(inventoryItem['price']),
-          });
-          _totalAmount += quantityToAdd * int.parse(inventoryItem['price']);
-        });
-
-        // Update inventory
-        availableQuantity -= quantityToAdd;
-        inventoryItem['quantity'] = availableQuantity;
-
-        // Save updated inventory back to local storage
-        prefs.setString('inventoryItems', json.encode(inventoryItems));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item not found in inventory')),
-        );
-      }
+  // Add item to the bill
+  void _addItemToBill() {
+    if (_selectedItem == null || _quantityController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an item and enter a quantity.')),
+      );
+      return;
     }
 
-    _itemNameController.clear();
-    _itemQuantityController.clear();
+    int quantityToAdd = int.parse(_quantityController.text);
+    int availableQuantity = int.parse(_selectedItem!['quantity']);
+
+    if (quantityToAdd > availableQuantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insufficient quantity in inventory.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _billingItems.add({
+        'name': _selectedItem!['name'],
+        'quantity': quantityToAdd,
+        'price': _selectedItem!['price'],
+        'total': quantityToAdd * int.parse(_selectedItem!['price']),
+      });
+      _totalAmount += quantityToAdd * int.parse(_selectedItem!['price']);
+
+      // Update inventory
+      _selectedItem!['quantity'] = availableQuantity - quantityToAdd;
+    });
+
+    _saveInventory();
+    _quantityController.clear();
+    _selectedItem = null;
   }
 
+  // Complete the bill and reset everything
   void _completeBill() {
-    // Save the bill to local storage
-    _saveBillingItems();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bill completed!')));
-    Navigator.pop(context); // Close the billing dashboard
+    setState(() {
+      _billingItems.clear();
+      _totalAmount = 0;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Bill completed! Inventory updated.')),
+    );
+    Navigator.pop(context);
+  }
+
+  // Toggle theme mode
+  void _toggleTheme() {
+    ThemeMode newThemeMode = widget.currentThemeMode == ThemeMode.light
+        ? ThemeMode.dark
+        : ThemeMode.light;
+    widget.onThemeChanged(newThemeMode);
   }
 
   @override
@@ -106,58 +111,143 @@ class _BillingDashboardState extends State<BillingDashboard> {
       appBar: AppBar(
         title: const Text('Billing Dashboard'),
         backgroundColor: const Color(0xFF30C75E),
+        actions: [
+          IconButton(
+            icon: Icon(widget.currentThemeMode == ThemeMode.light
+                ? Icons.nightlight_round
+                : Icons.wb_sunny),
+            onPressed: _toggleTheme,
+          ),
+        ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Searchable Dropdown and Quantity Input
+            Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _itemNameController,
-                    decoration: const InputDecoration(labelText: 'Item Name'),
+                  child: DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedItem,
+                    isExpanded: true,
+                    hint: const Text('Select an Item'),
+                    items: _inventoryItems
+                        .map((item) => DropdownMenuItem(
+                              value: item,
+                              child: Text('${item['name']} (Available: ${item['quantity']})'),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedItem = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
-                    controller: _itemQuantityController,
+                    controller: _quantityController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Quantity'),
+                    decoration: InputDecoration(
+                      labelText: 'Quantity',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: _addItemToBill,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
                   child: const Text('Add'),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('Total Amount: $_totalAmount PKR',
-              style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _billingItems.length,
-              itemBuilder: (context, index) {
-                final item = _billingItems[index];
-                return ListTile(
-                  title: Text(item['name']),
-                  subtitle: Text(
-                      'Quantity: ${item['quantity']}, Total: ${item['total']} PKR'),
-                );
-              },
+            const SizedBox(height: 16),
+
+            // Total Amount
+            Text(
+              'Total Amount: $_totalAmount PKR',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          ),
-          ElevatedButton(
-            onPressed: _completeBill,
-            child: const Text('Complete Bill'),
-          ),
-        ],
+            const SizedBox(height: 16),
+
+            // Billing Items List
+            Expanded(
+              child: ListView.builder(
+                itemCount: _billingItems.length,
+                itemBuilder: (context, index) {
+                  final item = _billingItems[index];
+                  return Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: ListTile(
+                      leading: const Icon(Icons.receipt, color: Colors.green),
+                      title: Text(item['name']),
+                      subtitle: Text(
+                          'Quantity: ${item['quantity']}, Price: ${item['price']} PKR, Total: ${item['total']} PKR'),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Complete Bill Button
+            ElevatedButton(
+              onPressed: _completeBill,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Complete Bill'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void main() {
+  runApp(
+    MyApp(),
+  );
+}
+
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: _themeMode,
+      home: BillingDashboard(
+        onThemeChanged: (ThemeMode newThemeMode) {
+          setState(() {
+            _themeMode = newThemeMode;
+          });
+        },
+        currentThemeMode: _themeMode,
       ),
     );
   }

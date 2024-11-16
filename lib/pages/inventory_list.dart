@@ -2,182 +2,153 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-class InventoryList extends StatefulWidget {
-  final Function(ThemeMode) onThemeChanged;
-  final ThemeMode currentThemeMode;
+class AddOrEditItemWidget extends StatefulWidget {
+  final bool isEdit;
+  final VoidCallback onClose;
+  final Function(String name, String id, String price, String quantity, String description) onSave;
+  final String? initialName;
+  final String? initialID;
+  final String? initialPrice;
+  final String? initialQuantity;
+  final String? initialDescription;
 
-  const InventoryList({
+  const AddOrEditItemWidget({
+    required this.isEdit,
+    required this.onClose,
+    required this.onSave,
+    this.initialName,
+    this.initialID,
+    this.initialPrice,
+    this.initialQuantity,
+    this.initialDescription,
     super.key,
-    required this.onThemeChanged,
-    required this.currentThemeMode,
   });
 
   @override
-  _InventoryListState createState() => _InventoryListState();
+  _AddOrEditItemWidgetState createState() => _AddOrEditItemWidgetState();
 }
 
-class _InventoryListState extends State<InventoryList> {
-  final List<Map<String, dynamic>> _inventoryItems = [];
-  final TextEditingController _itemNameController = TextEditingController();
-  final TextEditingController _itemPriceController = TextEditingController();
-  final TextEditingController _itemQuantityController = TextEditingController();
-  final TextEditingController _itemDescriptionController = TextEditingController(); // Description controller
-  int? _editingIndex;
+class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _idController;
+  late TextEditingController _priceController;
+  late TextEditingController _quantityController;
+  late TextEditingController _descriptionController;
 
   @override
   void initState() {
     super.initState();
-    _loadInventoryItems(); // Load items from local storage when the app starts
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _idController = TextEditingController(text: widget.initialID ?? '');
+    _priceController = TextEditingController(text: widget.initialPrice ?? '');
+    _quantityController = TextEditingController(text: widget.initialQuantity ?? '');
+    _descriptionController = TextEditingController(text: widget.initialDescription ?? '');
   }
 
   @override
   void dispose() {
-    _itemNameController.dispose();
-    _itemPriceController.dispose();
-    _itemQuantityController.dispose();
-    _itemDescriptionController.dispose();
+    _nameController.dispose();
+    _idController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
-  // Load inventory items from local storage
-  Future<void> _loadInventoryItems() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? storedItems = prefs.getString('inventoryItems');
-
-    if (storedItems != null) {
-      setState(() {
-        _inventoryItems.addAll(List<Map<String, dynamic>>.from(json.decode(storedItems)));
-      });
-    }
-  }
-
-  // Save the inventory list to local storage
-  Future<void> _saveInventoryItems() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('inventoryItems', json.encode(_inventoryItems));
-  }
-
-  // Add or update an inventory item
-  void _addOrUpdateItem() {
-    String itemName = _itemNameController.text;
-    String itemPrice = _itemPriceController.text;
-    String itemQuantity = _itemQuantityController.text;
-    String itemDescription = _itemDescriptionController.text;
-
-    if (itemName.isEmpty || itemPrice.isEmpty || itemQuantity.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
+  void _handleSave() {
+    if (_formKey.currentState?.validate() ?? false) {
+      widget.onSave(
+        _nameController.text.trim(),
+        _idController.text.trim(),
+        _priceController.text.trim(),
+        _quantityController.text.trim(),
+        _descriptionController.text.trim(),
       );
-      return;
     }
-
-    DateTime now = DateTime.now(); // Get current date and time
-    String dateTimeAdded = now.toIso8601String(); // Format the date and time
-
-    if (_editingIndex == null) {
-      // Add new item
-      setState(() {
-        _inventoryItems.add({
-          'name': itemName,
-          'price': itemPrice,
-          'quantity': itemQuantity,
-          'description': itemDescription,
-          'dateTimeAdded': dateTimeAdded, // Store the date and time added
-        });
-      });
-    } else {
-      // Update existing item
-      setState(() {
-        _inventoryItems[_editingIndex!] = {
-          'name': itemName,
-          'price': itemPrice,
-          'quantity': itemQuantity,
-          'description': itemDescription,
-          'dateTimeAdded': dateTimeAdded,
-        };
-        _editingIndex = null;
-      });
-    }
-
-    _saveInventoryItems(); // Save updated inventory to local storage
-
-    _itemNameController.clear();
-    _itemPriceController.clear();
-    _itemQuantityController.clear();
-    _itemDescriptionController.clear(); // Clear description field
-    Navigator.pop(context); // Close the bottom sheet after saving
   }
 
-  // Show the bottom sheet to add or edit an item
-  void _showAddOrEditItemSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: widget.currentThemeMode == ThemeMode.dark ? Colors.black87 : Colors.white, // Dynamic background
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          top: 16,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: _itemNameController,
-                decoration: InputDecoration(
-                  labelText: 'Item Name',
-                  labelStyle: TextStyle(
-                    color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.isEdit ? "Edit Item" : "Add Item",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                ),
-                style: TextStyle(
-                  color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
-                ),
+                  IconButton(
+                    onPressed: widget.onClose,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
-              TextField(
-                controller: _itemPriceController,
-                decoration: InputDecoration(
-                  labelText: 'Item Price (PKR)',
-                  labelStyle: TextStyle(
-                    color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
+              const SizedBox(height: 16),
+
+              // Fields
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: "Item Name"),
+                validator: (value) => value == null || value.isEmpty ? "Name is required" : null,
+              ),
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _quantityController,
+                      decoration: const InputDecoration(labelText: "Quantity"),
+                      keyboardType: TextInputType.number,
+                      validator: (value) => value == null || value.isEmpty ? "Quantity is required" : null,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _idController,
+                      decoration: const InputDecoration(labelText: "Item ID"),
+                      validator: (value) => value == null || value.isEmpty ? "ID is required" : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(labelText: "Price"),
                 keyboardType: TextInputType.number,
-                style: TextStyle(
-                  color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
-                ),
+                validator: (value) => value == null || value.isEmpty ? "Price is required" : null,
               ),
-              TextField(
-                controller: _itemQuantityController,
-                decoration: InputDecoration(
-                  labelText: 'Item Quantity',
-                  labelStyle: TextStyle(
-                    color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
-                  ),
-                ),
-                keyboardType: TextInputType.number,
-                style: TextStyle(
-                  color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
-                ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: "Description (Optional)"),
+                maxLines: 3,
               ),
-              TextField(
-                controller: _itemDescriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Item Description (optional)',
-                  labelStyle: TextStyle(
-                    color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
-                  ),
+              const SizedBox(height: 16),
+
+              // Save Button
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  onPressed: _handleSave,
+                  icon: const Icon(Icons.save),
+                  label: Text(widget.isEdit ? "Save" : "Add"),
                 ),
-                style: TextStyle(
-                  color: widget.currentThemeMode == ThemeMode.dark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _addOrUpdateItem,
-                child: Text(_editingIndex == null ? 'Add Item' : 'Update Item'),
               ),
             ],
           ),
@@ -185,25 +156,112 @@ class _InventoryListState extends State<InventoryList> {
       ),
     );
   }
+}
 
-  // Edit the selected inventory item
+class InventoryList extends StatefulWidget {
+  const InventoryList({super.key, required Function(ThemeMode p1) onThemeChanged, required ThemeMode currentThemeMode});
+
+  @override
+  _InventoryListState createState() => _InventoryListState();
+}
+
+class _InventoryListState extends State<InventoryList> {
+  final List<Map<String, dynamic>> _inventoryItems = [];
+  int? _editingIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInventoryItems();
+  }
+
+  Future<void> _loadInventoryItems() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedItems = prefs.getString('inventoryItems');
+    if (storedItems != null) {
+      setState(() {
+        _inventoryItems.addAll(List<Map<String, dynamic>>.from(json.decode(storedItems)));
+      });
+    }
+  }
+
+  Future<void> _saveInventoryItems() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('inventoryItems', json.encode(_inventoryItems));
+  }
+
+  void _addOrUpdateItem(String name, String id, String price, String quantity, String description) {
+    if (_editingIndex == null) {
+      setState(() {
+        _inventoryItems.add({
+          'name': name,
+          'id': id,
+          'price': price,
+          'quantity': quantity,
+          'description': description,
+        });
+      });
+    } else {
+      setState(() {
+        _inventoryItems[_editingIndex!] = {
+          'name': name,
+          'id': id,
+          'price': price,
+          'quantity': quantity,
+          'description': description,
+        };
+        _editingIndex = null;
+      });
+    }
+
+    _saveInventoryItems();
+    Navigator.pop(context);
+  }
+
   void _editItem(int index) {
     setState(() {
       _editingIndex = index;
-      _itemNameController.text = _inventoryItems[index]['name'];
-      _itemPriceController.text = _inventoryItems[index]['price'];
-      _itemQuantityController.text = _inventoryItems[index]['quantity'];
-      _itemDescriptionController.text = _inventoryItems[index]['description'] ?? ''; // Optional
     });
-    _showAddOrEditItemSheet();
+
+    final item = _inventoryItems[index];
+    _showAddOrEditItemDialog(
+      isEdit: true,
+      initialName: item['name'],
+      initialID: item['id'],
+      initialPrice: item['price'],
+      initialQuantity: item['quantity'],
+      initialDescription: item['description'],
+    );
   }
 
-  // Remove the selected inventory item
   void _removeItem(int index) {
     setState(() {
       _inventoryItems.removeAt(index);
     });
-    _saveInventoryItems(); // Update local storage
+    _saveInventoryItems();
+  }
+
+  void _showAddOrEditItemDialog({
+    bool isEdit = false,
+    String? initialName,
+    String? initialID,
+    String? initialPrice,
+    String? initialQuantity,
+    String? initialDescription,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AddOrEditItemWidget(
+        isEdit: isEdit,
+        onClose: () => Navigator.pop(context),
+        onSave: _addOrUpdateItem,
+        initialName: initialName,
+        initialID: initialID,
+        initialPrice: initialPrice,
+        initialQuantity: initialQuantity,
+        initialDescription: initialDescription,
+      ),
+    );
   }
 
   @override
@@ -211,35 +269,40 @@ class _InventoryListState extends State<InventoryList> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inventory List'),
-        backgroundColor: const Color(0xFF30C75E),
+        backgroundColor: Colors.green,
       ),
-      body: ListView.builder(
-        itemCount: _inventoryItems.length,
-        itemBuilder: (context, index) {
-          final item = _inventoryItems[index];
-          return ListTile(
-            title: Text(item['name']),
-            subtitle: Text('Price: ${item['price']} PKR, Quantity: ${item['quantity']}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _editItem(index),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _removeItem(index),
-                ),
-              ],
+      body: _inventoryItems.isEmpty
+          ? const Center(child: Text("No items in inventory"))
+          : ListView.builder(
+              itemCount: _inventoryItems.length,
+              itemBuilder: (context, index) {
+                final item = _inventoryItems[index];
+                return Card(
+                  margin: const EdgeInsets.all(8),
+                  child: ListTile(
+                    title: Text(item['name']),
+                    subtitle: Text("Quantity: ${item['quantity']}"),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _editItem(index),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _removeItem(index),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-            onTap: () => _editItem(index), // Edit on tap
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddOrEditItemSheet,
+        onPressed: () => _showAddOrEditItemDialog(),
         child: const Icon(Icons.add),
+        backgroundColor: Colors.green,
       ),
     );
   }
