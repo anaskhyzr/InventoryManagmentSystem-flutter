@@ -80,7 +80,6 @@ class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -95,15 +94,12 @@ class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Fields
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: "Item Name"),
                 validator: (value) => value == null || value.isEmpty ? "Name is required" : null,
               ),
               const SizedBox(height: 12),
-
               Row(
                 children: [
                   Expanded(
@@ -125,7 +121,6 @@ class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
                 ],
               ),
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: _priceController,
                 decoration: const InputDecoration(labelText: "Price"),
@@ -133,15 +128,12 @@ class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
                 validator: (value) => value == null || value.isEmpty ? "Price is required" : null,
               ),
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(labelText: "Description (Optional)"),
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-
-              // Save Button
               Align(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton.icon(
@@ -213,7 +205,6 @@ class _InventoryListState extends State<InventoryList> {
         _editingIndex = null;
       });
     }
-
     _saveInventoryItems();
     Navigator.pop(context);
   }
@@ -222,7 +213,6 @@ class _InventoryListState extends State<InventoryList> {
     setState(() {
       _editingIndex = index;
     });
-
     final item = _inventoryItems[index];
     _showAddOrEditItemDialog(
       isEdit: true,
@@ -281,7 +271,16 @@ class _InventoryListState extends State<InventoryList> {
                   margin: const EdgeInsets.all(8),
                   child: ListTile(
                     title: Text(item['name']),
-                    subtitle: Text("Quantity: ${item['quantity']}"),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("ID: ${item['id']}"),
+                        Text("Price: PKR ${item['price']}"),
+                        Text("Quantity: ${item['quantity']}"),
+                        if (item['description']?.isNotEmpty ?? false)
+                          Text("Description: ${item['description']}"),
+                      ],
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -301,8 +300,8 @@ class _InventoryListState extends State<InventoryList> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddOrEditItemDialog(),
-        child: const Icon(Icons.add),
         backgroundColor: Colors.green,
+        child: const Icon(Icons.add),
       ),
     );
   }

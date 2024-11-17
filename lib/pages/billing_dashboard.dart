@@ -4,10 +4,10 @@ import 'dart:convert';
 
 class BillingDashboard extends StatefulWidget {
   const BillingDashboard({
-    Key? key,
+    super.key,
     required this.onThemeChanged,
     required this.currentThemeMode,
-  }) : super(key: key);
+  });
 
   final Function(ThemeMode) onThemeChanged;
   final ThemeMode currentThemeMode;
@@ -29,25 +29,44 @@ class _BillingDashboardState extends State<BillingDashboard> {
     _loadInventory();
   }
 
-  // Load inventory from SharedPreferences
+  /// Load inventory from SharedPreferences
   Future<void> _loadInventory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storedInventory = prefs.getString('inventoryItems');
 
     if (storedInventory != null) {
       setState(() {
-        _inventoryItems.addAll(List<Map<String, dynamic>>.from(json.decode(storedInventory)));
+        _inventoryItems.addAll(
+          List<Map<String, dynamic>>.from(
+            json.decode(storedInventory).map((item) => {
+                  'name': item['name'],
+                  'quantity': int.tryParse(item['quantity'].toString()) ?? 0,
+                  'price': int.tryParse(item['price'].toString()) ?? 0,
+                  'description': item['description'] ?? '',
+                }),
+          ),
+        );
       });
     }
   }
 
-  // Save updated inventory to SharedPreferences
+  /// Save updated inventory to SharedPreferences
   Future<void> _saveInventory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('inventoryItems', json.encode(_inventoryItems));
+    prefs.setString(
+      'inventoryItems',
+      json.encode(
+        _inventoryItems.map((item) => {
+              'name': item['name'],
+              'quantity': item['quantity'].toString(),
+              'price': item['price'].toString(),
+              'description': item['description'] ?? '',
+            }).toList(),
+      ),
+    );
   }
 
-  // Add item to the bill
+  /// Add item to the bill
   void _addItemToBill() {
     if (_selectedItem == null || _quantityController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,8 +75,8 @@ class _BillingDashboardState extends State<BillingDashboard> {
       return;
     }
 
-    int quantityToAdd = int.parse(_quantityController.text);
-    int availableQuantity = int.parse(_selectedItem!['quantity']);
+    int quantityToAdd = int.tryParse(_quantityController.text) ?? 0;
+    int availableQuantity = _selectedItem!['quantity'];
 
     if (quantityToAdd > availableQuantity) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,13 +86,16 @@ class _BillingDashboardState extends State<BillingDashboard> {
     }
 
     setState(() {
+      // Ensure totalForItem is explicitly cast to int
+      int totalForItem = (quantityToAdd * _selectedItem!['price']).toInt();
       _billingItems.add({
         'name': _selectedItem!['name'],
         'quantity': quantityToAdd,
         'price': _selectedItem!['price'],
-        'total': quantityToAdd * int.parse(_selectedItem!['price']),
+        'total': totalForItem,
       });
-      _totalAmount += quantityToAdd * int.parse(_selectedItem!['price']);
+
+      _totalAmount += totalForItem;
 
       // Update inventory
       _selectedItem!['quantity'] = availableQuantity - quantityToAdd;
@@ -84,20 +106,35 @@ class _BillingDashboardState extends State<BillingDashboard> {
     _selectedItem = null;
   }
 
-  // Complete the bill and reset everything
-  void _completeBill() {
+  /// Complete the bill and reset everything
+  void _completeBill() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<Map<String, dynamic>> historyBills = [];
+    String? storedHistory = prefs.getString('historyBills');
+
+    if (storedHistory != null) {
+      historyBills = List<Map<String, dynamic>>.from(json.decode(storedHistory));
+    }
+
+    historyBills.add({
+      'items': _billingItems,
+      'total': _totalAmount,
+      'date': DateTime.now().toIso8601String(),
+    });
+
+    await prefs.setString('historyBills', json.encode(historyBills));
+
     setState(() {
       _billingItems.clear();
       _totalAmount = 0;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bill completed! Inventory updated.')),
+      const SnackBar(content: Text('Bill completed and saved to history!')),
     );
-    Navigator.pop(context);
   }
 
-  // Toggle theme mode
+  /// Toggle theme mode
   void _toggleTheme() {
     ThemeMode newThemeMode = widget.currentThemeMode == ThemeMode.light
         ? ThemeMode.dark
@@ -113,9 +150,11 @@ class _BillingDashboardState extends State<BillingDashboard> {
         backgroundColor: const Color(0xFF30C75E),
         actions: [
           IconButton(
-            icon: Icon(widget.currentThemeMode == ThemeMode.light
-                ? Icons.nightlight_round
-                : Icons.wb_sunny),
+            icon: Icon(
+              widget.currentThemeMode == ThemeMode.light
+                  ? Icons.nightlight_round
+                  : Icons.wb_sunny,
+            ),
             onPressed: _toggleTheme,
           ),
         ],
@@ -124,7 +163,7 @@ class _BillingDashboardState extends State<BillingDashboard> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Searchable Dropdown and Quantity Input
+            // Dropdown and Quantity Input
             Row(
               children: [
                 Expanded(
@@ -133,10 +172,14 @@ class _BillingDashboardState extends State<BillingDashboard> {
                     isExpanded: true,
                     hint: const Text('Select an Item'),
                     items: _inventoryItems
-                        .map((item) => DropdownMenuItem(
-                              value: item,
-                              child: Text('${item['name']} (Available: ${item['quantity']})'),
-                            ))
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(
+                              '${item['name']} (Available: ${item['quantity']})',
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (value) {
                       setState(() {
@@ -189,14 +232,17 @@ class _BillingDashboardState extends State<BillingDashboard> {
                 itemBuilder: (context, index) {
                   final item = _billingItems[index];
                   return Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     elevation: 3,
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
                       leading: const Icon(Icons.receipt, color: Colors.green),
                       title: Text(item['name']),
                       subtitle: Text(
-                          'Quantity: ${item['quantity']}, Price: ${item['price']} PKR, Total: ${item['total']} PKR'),
+                        'Quantity: ${item['quantity']}, Price: ${item['price']} PKR, Total: ${item['total']} PKR',
+                      ),
                     ),
                   );
                 },
@@ -222,12 +268,12 @@ class _BillingDashboardState extends State<BillingDashboard> {
 }
 
 void main() {
-  runApp(
-    MyApp(),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   _MyAppState createState() => _MyAppState();
 }
