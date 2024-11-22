@@ -41,7 +41,9 @@ class _HistoryBillsPageState extends State<HistoryBillsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('History Bills'),
+        backgroundColor: const Color(0xFF30C75E),
       ),
+      backgroundColor: const Color.fromARGB(255, 27, 27, 27),
       body: _historyBills.isEmpty
           ? const Center(
               child: Text(
@@ -69,7 +71,7 @@ class _HistoryBillsPageState extends State<HistoryBillsPage> {
                     title: Text('Bill Date: $formattedDate'),
                     subtitle: Text('Total Amount: ${bill['total']} PKR'),
                     trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(Icons.delete, color: Color.fromARGB(255, 247, 247, 247)),
                       onPressed: () async {
                         final shouldDelete = await showDialog<bool>(
                           context: context,

@@ -71,78 +71,84 @@ class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.isEdit ? "Edit Item" : "Add Item",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: "Item Name"),
-                validator: (value) => value == null || value.isEmpty ? "Name is required" : null,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _quantityController,
-                      decoration: const InputDecoration(labelText: "Quantity"),
-                      keyboardType: TextInputType.number,
-                      validator: (value) => value == null || value.isEmpty ? "Quantity is required" : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.isEdit ? "Edit Item" : "Add Item",
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _idController,
-                      decoration: const InputDecoration(labelText: "Item ID"),
-                      validator: (value) => value == null || value.isEmpty ? "ID is required" : null,
+                    IconButton(
+                      onPressed: widget.onClose,
+                      icon: const Icon(Icons.close),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: "Price"),
-                keyboardType: TextInputType.number,
-                validator: (value) => value == null || value.isEmpty ? "Price is required" : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: "Description (Optional)"),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  onPressed: _handleSave,
-                  icon: const Icon(Icons.save),
-                  label: Text(widget.isEdit ? "Save" : "Add"),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: "Item Name"),
+                  validator: (value) => value == null || value.isEmpty ? "Name is required" : null,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _quantityController,
+                        decoration: const InputDecoration(labelText: "Quantity"),
+                        keyboardType: TextInputType.number,
+                        validator: (value) => value == null || value.isEmpty ? "Quantity is required" : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _idController,
+                        decoration: const InputDecoration(labelText: "Item ID"),
+                        validator: (value) => value == null || value.isEmpty ? "ID is required" : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _priceController,
+                  decoration: const InputDecoration(labelText: "Price"),
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value == null || value.isEmpty ? "Price is required" : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(labelText: "Description (Optional)"),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: _handleSave,
+                    icon: const Icon(Icons.save),
+                    label: Text(widget.isEdit ? "Save" : "Add"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -151,7 +157,7 @@ class _AddOrEditItemWidgetState extends State<AddOrEditItemWidget> {
 }
 
 class InventoryList extends StatefulWidget {
-  const InventoryList({super.key, required Function(ThemeMode p1) onThemeChanged, required ThemeMode currentThemeMode});
+  const InventoryList({super.key});
 
   @override
   _InventoryListState createState() => _InventoryListState();
@@ -261,35 +267,56 @@ class _InventoryListState extends State<InventoryList> {
         title: const Text('Inventory List'),
         backgroundColor: Colors.green,
       ),
+      backgroundColor: const Color(0xFF1C1C1E),
       body: _inventoryItems.isEmpty
-          ? const Center(child: Text("No items in inventory"))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.inventory_2, size: 100, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "No items in inventory",
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _showAddOrEditItemDialog(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text("Add Item"),
+                  ),
+                ],
+              ),
+            )
           : ListView.builder(
               itemCount: _inventoryItems.length,
               itemBuilder: (context, index) {
                 final item = _inventoryItems[index];
                 return Card(
                   margin: const EdgeInsets.all(8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
-                    title: Text(item['name']),
+                    title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("ID: ${item['id']}"),
-                        Text("Price: PKR ${item['price']}"),
+                        Text("Price: \$${item['price']}"),
                         Text("Quantity: ${item['quantity']}"),
-                        if (item['description']?.isNotEmpty ?? false)
-                          Text("Description: ${item['description']}"),
                       ],
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit),
+                          icon: const Icon(Icons.edit, color: Colors.blue),
                           onPressed: () => _editItem(index),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete),
+                          icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _removeItem(index),
                         ),
                       ],
@@ -305,4 +332,8 @@ class _InventoryListState extends State<InventoryList> {
       ),
     );
   }
+}
+
+void main() {
+  runApp(const MaterialApp(home: InventoryList()));
 }

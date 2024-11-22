@@ -3,14 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class BillingDashboard extends StatefulWidget {
-  const BillingDashboard({
-    super.key,
-    required this.onThemeChanged,
-    required this.currentThemeMode,
-  });
-
-  final Function(ThemeMode) onThemeChanged;
-  final ThemeMode currentThemeMode;
+  const BillingDashboard({super.key});
 
   @override
   _BillingDashboardState createState() => _BillingDashboardState();
@@ -21,7 +14,7 @@ class _BillingDashboardState extends State<BillingDashboard> {
   final TextEditingController _quantityController = TextEditingController();
   final List<Map<String, dynamic>> _inventoryItems = [];
   Map<String, dynamic>? _selectedItem;
-  int _totalAmount = 0;
+  num _totalAmount = 0;
 
   @override
   void initState() {
@@ -29,7 +22,6 @@ class _BillingDashboardState extends State<BillingDashboard> {
     _loadInventory();
   }
 
-  /// Load inventory from SharedPreferences
   Future<void> _loadInventory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storedInventory = prefs.getString('inventoryItems');
@@ -50,7 +42,6 @@ class _BillingDashboardState extends State<BillingDashboard> {
     }
   }
 
-  /// Save updated inventory to SharedPreferences
   Future<void> _saveInventory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString(
@@ -66,7 +57,6 @@ class _BillingDashboardState extends State<BillingDashboard> {
     );
   }
 
-  /// Add item to the bill
   void _addItemToBill() {
     if (_selectedItem == null || _quantityController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,8 +76,7 @@ class _BillingDashboardState extends State<BillingDashboard> {
     }
 
     setState(() {
-      // Ensure totalForItem is explicitly cast to int
-      int totalForItem = (quantityToAdd * _selectedItem!['price']).toInt();
+      num totalForItem = quantityToAdd * _selectedItem!['price'];
       _billingItems.add({
         'name': _selectedItem!['name'],
         'quantity': quantityToAdd,
@@ -96,8 +85,6 @@ class _BillingDashboardState extends State<BillingDashboard> {
       });
 
       _totalAmount += totalForItem;
-
-      // Update inventory
       _selectedItem!['quantity'] = availableQuantity - quantityToAdd;
     });
 
@@ -106,7 +93,6 @@ class _BillingDashboardState extends State<BillingDashboard> {
     _selectedItem = null;
   }
 
-  /// Complete the bill and reset everything
   void _completeBill() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<Map<String, dynamic>> historyBills = [];
@@ -134,34 +120,19 @@ class _BillingDashboardState extends State<BillingDashboard> {
     );
   }
 
-  /// Toggle theme mode
-  void _toggleTheme() {
-    ThemeMode newThemeMode = widget.currentThemeMode == ThemeMode.light
-        ? ThemeMode.dark
-        : ThemeMode.light;
-    widget.onThemeChanged(newThemeMode);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF1C1C1E),
       appBar: AppBar(
         title: const Text('Billing Dashboard'),
         backgroundColor: const Color(0xFF30C75E),
-        actions: [
-          IconButton(
-            icon: Icon(
-              widget.currentThemeMode == ThemeMode.light
-                  ? Icons.nightlight_round
-                  : Icons.wb_sunny,
-            ),
-            onPressed: _toggleTheme,
-          ),
-        ],
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Dropdown and Quantity Input
             Row(
@@ -170,13 +141,18 @@ class _BillingDashboardState extends State<BillingDashboard> {
                   child: DropdownButtonFormField<Map<String, dynamic>>(
                     value: _selectedItem,
                     isExpanded: true,
-                    hint: const Text('Select an Item'),
+                    hint: const Text(
+                      'Select an Item',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    dropdownColor: Colors.grey[850],
                     items: _inventoryItems
                         .map(
                           (item) => DropdownMenuItem(
                             value: item,
                             child: Text(
                               '${item['name']} (Available: ${item['quantity']})',
+                              style: const TextStyle(color: Colors.white),
                             ),
                           ),
                         )
@@ -187,6 +163,8 @@ class _BillingDashboardState extends State<BillingDashboard> {
                       });
                     },
                     decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF2C2C2E),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -198,8 +176,12 @@ class _BillingDashboardState extends State<BillingDashboard> {
                   child: TextField(
                     controller: _quantityController,
                     keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Quantity',
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: const Color(0xFF2C2C2E),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -211,6 +193,7 @@ class _BillingDashboardState extends State<BillingDashboard> {
                   onPressed: _addItemToBill,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   ),
                   child: const Text('Add'),
                 ),
@@ -221,32 +204,40 @@ class _BillingDashboardState extends State<BillingDashboard> {
             // Total Amount
             Text(
               'Total Amount: $_totalAmount PKR',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 16),
 
             // Billing Items List
             Expanded(
-              child: ListView.builder(
-                itemCount: _billingItems.length,
-                itemBuilder: (context, index) {
-                  final item = _billingItems[index];
-                  return Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 3,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    child: ListTile(
-                      leading: const Icon(Icons.receipt, color: Colors.green),
-                      title: Text(item['name']),
-                      subtitle: Text(
-                        'Quantity: ${item['quantity']}, Price: ${item['price']} PKR, Total: ${item['total']} PKR',
+              child: _billingItems.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No items in the bill',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
+                    )
+                  : ListView.builder(
+                      itemCount: _billingItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _billingItems[index];
+                        return Card(
+                          color: const Color(0xFF2C2C2E),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            leading: const Icon(Icons.receipt, color: Colors.green),
+                            title: Text(item['name'], style: const TextStyle(color: Colors.white)),
+                            subtitle: Text(
+                              'Quantity: ${item['quantity']}, Price: ${item['price']} PKR, Total: ${item['total']} PKR',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
 
             // Complete Bill Button
@@ -254,11 +245,14 @@ class _BillingDashboardState extends State<BillingDashboard> {
               onPressed: _completeBill,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Complete Bill'),
+              child: const Center(
+                child: Text('Complete Bill', style: TextStyle(fontSize: 16)),
+              ),
             ),
           ],
         ),
@@ -268,33 +262,10 @@ class _BillingDashboardState extends State<BillingDashboard> {
 }
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.light;
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: _themeMode,
-      home: BillingDashboard(
-        onThemeChanged: (ThemeMode newThemeMode) {
-          setState(() {
-            _themeMode = newThemeMode;
-          });
-        },
-        currentThemeMode: _themeMode,
-      ),
-    );
-  }
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: BillingDashboard(),
+    ),
+  );
 }

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/pages/splash_screen.dart';
+import 'pages/splash_screen.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
-import 'pages/settings.dart';
 import 'pages/inventory_list.dart';
 import 'pages/billing_dashboard.dart';
-
+import 'pages/history_bill.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -18,51 +17,28 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode themeMode = ThemeMode.light; // Default theme mode
-
-  void setThemeMode(ThemeMode mode) {
-    setState(() {
-      themeMode = mode;
-    });
-  }
+ 
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Inventory Billing App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: themeMode,
-      // Set SplashScreen as the initial screen
-      home: const SplashScreen(),
+      home: const SplashScreen(), // SplashScreen as the initial screen
       routes: {
         // Login route
         '/login': (context) => const InventoryLoginPage(),
 
         // Home route
-        '/home': (context) => HomePage(
-              onThemeChanged: setThemeMode,
-              currentThemeMode: themeMode,
-            ),
-
-        // Settings route
-        '/settings': (context) => SettingsPage(
-              onThemeChanged: setThemeMode,
-              currentThemeMode: themeMode,
-            ),
+        '/home': (context) => const HomePage(),
 
         // Inventory List route
-        '/inventory': (context) => InventoryList(
-              onThemeChanged: setThemeMode,
-              currentThemeMode: themeMode,
-            ),
+        '/inventory': (context) => const InventoryList(),
 
         // Billing Dashboard route
-        '/billing': (context) => BillingDashboard(
-              onThemeChanged: setThemeMode,
-              currentThemeMode: themeMode,
-            ),
+        '/billing': (context) => const BillingDashboard(),
+
+        '/history': (context)=> const HistoryBillsPage(),
       },
     );
   }
